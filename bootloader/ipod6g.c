@@ -391,7 +391,8 @@ void main(void)
 
     verbose = true;
 
-    printf("Rockbox boot loader");
+    printf("Rockbox Boot Loader");
+	printf("iPod OS Primary");
     printf("Version: %s", rbversion);
 
     backlight_init(); /* Turns on the backlight */
@@ -409,12 +410,13 @@ void main(void)
         filesystem_init();
 
         /* We wait until HDD spins up to check for hold button */
-        if (button_hold()) {
+        if (button_read_device() != BUTTON_SELECT && !button_hold()) {
 //            fw = FW_APPLE;
-            printf("Executing OF...");
+            printf("Booting iPodOS...");
             ata_sleepnow();
             rc = kernel_launch_onb();
         }
+		
     }
 
     if (rc != 0) {
