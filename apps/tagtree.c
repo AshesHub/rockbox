@@ -1465,18 +1465,8 @@ static int retrieve_entries(struct tree_context *c, int offset, bool init)
     int sort_limit;
     int strip;
 
-    /* Show search progress straight away if the disk needs to spin up,
-       otherwise show it after the normal 1/2 second delay */
-    show_search_progress(
-#ifdef HAVE_DISK_STORAGE
-#ifdef HAVE_TC_RAMCACHE
-        tagcache_is_in_ram() ? true :
-#endif
-        storage_disk_is_active()
-#else
-        true
-#endif
-        , 0, 0, 0);
+    /* Show search progress after 0.5s delay */
+    show_search_progress(true, 0, 0, 0);
 
     if (c->currtable == TABLE_ALLSUBENTRIES)
     {
@@ -2205,34 +2195,35 @@ static bool insert_all_playlist(struct tree_context *c,
     bool fill_randomly = false;
     bool *rand_bool_array = NULL;
     char buf[MAX_PATH];
+    struct playlist_insert_context context;
 
     cpu_boost(true);
+
     if (!tagcache_search(&tcs, tag_filename))
     {
         splash(HZ, ID2P(LANG_TAGCACHE_BUSY));
         cpu_boost(false);
         return false;
-    }
+    } /* NOTE: you need to close this search before returning */
 
-    if (playlist == NULL && position == PLAYLIST_REPLACE)
+    if (playlist == NULL)
     {
-        if (playlist_remove_all_tracks(NULL) == 0)
-            position = PLAYLIST_INSERT_LAST;
-        else
+        if (playlist_insert_context_create(NULL, &context, position, queue, false) < 0)
         {
+            tagcache_search_finish(&tcs);
             cpu_boost(false);
             return false;
         }
     }
-    else if (playlist != NULL)
+    else
     {
         if (new_playlist)
             fd = open_utf8(playlist, O_CREAT|O_WRONLY|O_TRUNC);
         else
             fd = open(playlist, O_CREAT|O_WRONLY|O_APPEND, 0666);
-
         if(fd < 0)
         {
+            tagcache_search_finish(&tcs);
             cpu_boost(false);
             return false;
         }
@@ -2249,6 +2240,7 @@ static bool insert_all_playlist(struct tree_context *c,
         if (slots_remaining <= 0)
         {
             logf("Playlist has no space remaining");
+            tagcache_search_finish(&tcs);
             cpu_boost(false);
             return false;
         }
@@ -2332,7 +2324,7 @@ static bool insert_all_playlist(struct tree_context *c,
                 }
             }
 
-            if (playlist_insert_track(NULL, buf, position, queue, false) < 0) {
+            if (playlist_insert_context_add(&context, buf) < 0) {
                 logf("playlist_insert_track failed");
                 exit_loop_now = true;
                 break;
@@ -2344,16 +2336,16 @@ static bool insert_all_playlist(struct tree_context *c,
             break;
         }
         yield();
-        if (playlist == NULL && position == PLAYLIST_INSERT_FIRST)
-            position = PLAYLIST_INSERT;
 
         if (exit_loop_now)
             break;
     }
+
     if (playlist == NULL)
-        playlist_sync(NULL);
+        playlist_insert_context_release(&context);
     else
         close(fd);
+
     tagcache_search_finish(&tcs);
     cpu_boost(false);
 

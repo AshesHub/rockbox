@@ -717,6 +717,7 @@ static int scroll_bmp(struct image_info *info, bool initial_frame)
 #ifdef IMGVIEW_ZOOM_PRE
             if (lastbutton != IMGVIEW_ZOOM_PRE)
                 break;
+            lastbutton = button;
 #endif
             return ZOOM_IN;
             break;
@@ -725,6 +726,7 @@ static int scroll_bmp(struct image_info *info, bool initial_frame)
 #ifdef IMGVIEW_ZOOM_PRE
             if (lastbutton != IMGVIEW_ZOOM_PRE)
                 break;
+            lastbutton = button;
 #endif
             return ZOOM_OUT;
             break;
@@ -851,6 +853,8 @@ static int load_and_show(char* filename, struct image_info *info)
         file_pt[curfile] = NULL;
         return change_filename(direction);
     }
+
+reload_decoder:
     if (image_type != status) /* type of image is changed, load decoder. */
     {
         struct loader_info loader_info = {
@@ -878,6 +882,13 @@ static int load_and_show(char* filename, struct image_info *info)
         status = PLUGIN_ABORT;
     else
         status = imgdec->load_image(filename, info, buf, &remaining);
+
+    if (status == PLUGIN_JPEG_PROGRESSIVE)
+    {
+        rb->lcd_clear_display();
+        status = IMAGE_JPEG_PROGRESSIVE;
+        goto reload_decoder;
+    }
 
     if (status == PLUGIN_OUTOFMEM)
     {

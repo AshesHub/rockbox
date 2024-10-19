@@ -29,6 +29,7 @@ use DirHandle;
 use open ':encoding(utf8)';
 use Encode::Locale;
 use Encode;
+use Unicode::Normalize;
 
 sub printusage {
     print <<USAGE
@@ -280,6 +281,9 @@ sub voicestring {
     my $name = $$tts_object{'name'};
 
     $tts_engine_opts .= $$tts_object{"ttsoptions"};
+
+    # Normalize Unicode
+    $string = NFC($string);
 
     printf("Generate \"%s\" with %s in file %s\n", $string, $name, $output) if $verbose;
     if ($name eq 'festival') {
@@ -583,7 +587,7 @@ sub panic_cleanup {
 # Generate .talk clips
 sub gentalkclips {
     our $verbose;
-    my ($dir, $tts_object, $encoder, $encoder_opts, $tts_engine_opts, $i) = @_;
+    my ($dir, $tts_object, $language, $encoder, $encoder_opts, $tts_engine_opts, $i) = @_;
     my $d = new DirHandle $dir;
     while (my $file = $d->read) {
 	$file = Encode::decode( locale_fs => $file);
@@ -619,6 +623,9 @@ sub gentalkclips {
             $enc = sprintf("%s.talk", $path);
             $voice =~ s/\.[^\.]*$//; # Trim extension
         }
+
+	# Apply corrections
+	$voice = correct_string($voice, $language, $tts_object);
 
         printf("Talkclip %s: %s", $enc, $voice) if $verbose;
 	# Don't generate encoded file if it already exists
@@ -691,7 +698,7 @@ if ($V == 1) {
     deleteencs();
 } elsif ($C) {
     printf("Generating .talk clips\n  Path: %s\n  Language: %s\n  Encoder (options): %s (%s)\n  TTS Engine (options): %s (%s)\n", $ARGV[0], $l, $e, $E, $s, $S);
-    gentalkclips($ARGV[0], $tts_object, $e, $E, $S, 0);
+    gentalkclips($ARGV[0], $tts_object, $l, $e, $E, $S, 0);
     shutdown_tts($tts_object);
 } else {
     printusage();

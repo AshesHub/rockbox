@@ -101,7 +101,7 @@ struct ata_smart_values
     unsigned char reserved_375_385[11];
     unsigned char vendor_specific_386_510[125];
     unsigned char chksum;
-} __attribute__((packed));
+} __attribute__((packed)) __attribute__((aligned(2)));
 
 /* Raw attribute value print formats */
 enum ata_attr_raw_format
@@ -176,7 +176,6 @@ static inline int ata_disk_isssd(void)
         0x0401 -> 0xffe == RPM
         All others reserved
 
-        Some CF cards return 0x0100 (ie byteswapped 0x0001) so accept either.
         However, this is a relatively recent change, and we can't rely on it,
         especially for the FC1307A CF->SD adapters!
 
@@ -199,14 +198,13 @@ static inline int ata_disk_isssd(void)
         then device is standard flash CF.  However this is not foolproof
         as newer CF cards (and those CF->SD adapters) may report this.
 
-
      */
-    return ( (identify_info[217] == 0x0001 || identify_info[217] == 0x0100) /* "Solid state" rotational rate */
-             || ((identify_info[168] & 0x0f) >= 0x06)                       /* Explicit SSD form factors */
-             || (identify_info[169] & (1<<0))                               /* TRIM supported */
-             || (identify_info[163] > 0)                                    /* CF Advanced timing modes */
-             || ((identify_info[83] & (1<<2)) &&                            /* CFA compliant */
-                 ((identify_info[160] & (1<<15)) == 0))                       /* CF power level 0 */
+    return ( (identify_info[217] == 0x0001)               /* "Solid state" rotational rate */
+             || ((identify_info[168] & 0x0f) >= 0x06)     /* Explicit SSD form factors */
+             || (identify_info[169] & (1<<0))             /* TRIM supported */
+             || (identify_info[163] > 0)                  /* CF Advanced timing modes */
+             || ((identify_info[83] & (1<<2)) &&          /* CFA compliant */
+                 ((identify_info[160] & (1<<15)) == 0))   /* CF power level 0 */
            );
 }
 
