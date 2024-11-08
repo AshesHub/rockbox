@@ -1364,7 +1364,7 @@ static int disk_callback(int btn, struct gui_synclist *lists)
                     ver = "Unknown";
                     break;
             }
-            simplelist_addline("SDVer: %s\n", ver);
+            simplelist_addline("SDVer: %s", ver);
             if (csd_structure == 0) /* CSD version 1.0 */
 #endif
             {
@@ -1442,10 +1442,10 @@ static int disk_callback(int btn, struct gui_synclist *lists)
     uint32_t sector_size;
 
     /* Logical sector size > 512B ? */
-    if ((identify_info[106] & 0xd000) == 0x5000)
-        sector_size = identify_info[117] | (identify_info[118] << 16);
+    if ((identify_info[106] & 0xd000) == 0x5000) /* B14, B12 */
+        sector_size = (identify_info[117] | (identify_info[118] << 16)) * 2;
     else
-        sector_size = SECTOR_SIZE;
+        sector_size = 512;
 
     total_sectors *= sector_size;   /* Convert to bytes */
     total_sectors /= (1024 * 1024); /* Convert to MB */
@@ -1456,7 +1456,7 @@ static int disk_callback(int btn, struct gui_synclist *lists)
     simplelist_addline("Sector multiplier: %u", disk_get_sector_multiplier());
 #endif
 
-    if((identify_info[106] & 0xe000) == 0x6000)
+    if((identify_info[106] & 0xe000) == 0x6000) /* B14, B13 */
         sector_size *= BIT_N(identify_info[106] & 0x000f);
     simplelist_addline(
             "Physical sector size: %lu B", sector_size);
@@ -1481,6 +1481,8 @@ static int disk_callback(int btn, struct gui_synclist *lists)
     i = identify_info[83] & (1<<9);
     simplelist_addline(
              "Noise mgmt: %s", i ? "enabled" : "unsupported");
+    simplelist_addline(
+             "Flush cache: %s", identify_info[83] & (1<<13) ? "extended" : identify_info[83] & (1<<12) ? "standard" : identify_info[80] >= (1<<5) ? "ATA-5" : "unsupported");
     i = identify_info[82] & (1<<6);
     simplelist_addline(
              "Read-ahead: %s", i ? "enabled" : "unsupported");
@@ -1567,9 +1569,9 @@ static int disk_callback(int btn, struct gui_synclist *lists)
                 '0' + (i & 7));
     }
 #endif /* HAVE_ATA_DMA */
-    i = identify_info[0] & (1 << 15);
+    i = identify_info[83] & (1 << 2);
     simplelist_addline(
-            "CF compatible: %s", i ? "yes" : "no");
+            "CFA compatible: %s", i ? "yes" : "no");
     i = identify_info[0] & (1 << 6);
     simplelist_addline(
             "Fixed device: %s", i ? "yes" : "no");
