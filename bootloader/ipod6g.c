@@ -392,7 +392,7 @@ void main(void)
     verbose = true;
 
     printf("Rockbox Boot Loader");
-	printf("iPod OS Primary");
+    printf("iPod OS Primary");
     printf("Version: %s", rbversion);
 
     backlight_init(); /* Turns on the backlight */
